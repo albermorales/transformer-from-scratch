@@ -1,0 +1,20 @@
+name: transformer-implementation
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - onnx
+  - pip
+  - pip:
+      - --index-url https://download.pytorch.org/whl/cu130
+      - --extra-index-url https://pypi.org/simple
+      - torch==2.13.0+cu130
+      - onnxscript
+      - datasets
+      - sentencepiece
+      - sacrebleu
+      - ipykernel
+      - tensorboard
+      - tokenizers
+      - transformers

@@ -1,0 +1,95 @@
+training: 
+  name: wmt14-en-to-de-transformer-112m
+  output_path: runs
+  total_training_steps: 300_000
+  # max_grad_norm: 5.0
+  checkpoint_freq: 100
+  hardware_acceleration: True
+
+shared:
+  batch_size: &batch_size 256
+  tokenizer: &tokenizer wmt14-en-de-bpe-16000
+  model_dim: &model_dim 768
+
+
+model:
+  class: src.models.Base:Transformer
+  args:
+    model_dim: *model_dim
+    num_heads: 12
+    num_blocks: 6
+    query_dim: 64
+    dropout: 0.1
+    max_length: 160
+
+
+loss:
+  class: torch.nn:CrossEntropyLoss
+  args:
+    label_smoothing: 0.1
+    ignore_index: 0
+
+evaluator: 
+  class: src.metrics.TranslationMetrics:TranslationEvaluator
+  args: 
+    metrics: 
+    - token_accuracy
+    - bleu
+
+dataset:
+  class: src.dataset.English2GermanWMT14:SentenceDataset
+
+  train:
+    tokenizer: *tokenizer
+    max_length: 80
+    training: True
+
+  valid:
+    tokenizer: *tokenizer
+    training: False
+
+
+batch_sampler:
+  class: src.dataset.English2GermanWMT14:LengthBucketBatchSampler
+
+  train:
+    batch_size: *batch_size
+    shuffle: true
+    drop_last: true
+
+  valid:
+    batch_size: *batch_size
+    shuffle: false
+    drop_last: false
+
+collate_fn:
+  function: src.dataset.English2GermanWMT14:dynamic_padding_collate
+
+
+dataloader:
+  class: torch.utils.data:DataLoader
+  train:
+    pin_memory: true
+    num_workers: 16
+    persistent_workers: true
+    prefetch_factor: 4
+
+  valid:
+    pin_memory: true
+    num_workers: 8
+
+
+optimizer:
+  class: torch.optim:AdamW
+  args:
+    betas: [0.9, 0.98]
+    eps: 1.0e-9
+    weight_decay: 0.0
+
+
+scheduler:
+  class: src.scheduler.WarmupCosineScheduler:TransformerLRScheduler
+  args:
+    d_model: *model_dim
+    warmup_steps: 4000
+    slowdown_factor: 1
